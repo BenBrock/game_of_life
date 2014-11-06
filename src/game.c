@@ -23,7 +23,11 @@ int main(int argc, char **argv)
 
   grid = gen_grid(grid_width, grid_height);
 
-  print_grid(grid, grid_width, grid_height);
+  while (1) {
+    print_grid(grid, grid_width, grid_height);
+    step_grid(grid, grid_width, grid_height);
+    usleep(200000);
+  }
 
   free(grid);
 
@@ -50,12 +54,14 @@ void print_grid(char *grid, int grid_width, int grid_height)
 {
   int i, j;
 
+  printf("\033[H");
   for (j = 0; j < grid_height; j++) {
     for (i = 0; i < grid_width; i++) {
-      printf((grid[j * grid_width + i]) ? "1" : "0");
+      printf((grid[j * grid_width + i]) ? "\033[07m  \033[m" : "  ");
     }
-    printf("\n");
+    printf("\033[E");
   }
+  fflush(stdout);
 }
 
 void step_grid(char *grid, int grid_width, int grid_height)
