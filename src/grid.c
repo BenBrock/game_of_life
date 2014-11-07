@@ -3,6 +3,12 @@
 #include "gol.h"
 
 
+inline int euc_mod(int p, int q)
+{
+	int r = p % q;
+	return (r < 0) ? r + q : r;
+}
+
 void grid_init(grid_t *grid, int width, int height)
 {
   grid->cells = malloc(width * height);
@@ -28,12 +34,8 @@ void grid_seed(grid_t *grid, long seed)
 
 char grid_at(grid_t *grid, int x, int y)
 {
-  if (x < 0 || x >= grid->width) {
-    return 0;
-  }
-  if (y < 0 || y >= grid->height) {
-    return 0;
-  }
+	x = euc_mod(x, grid->width);
+	y = euc_mod(y, grid->height);
   return grid->cells[x + grid->width * y];
 }
 
