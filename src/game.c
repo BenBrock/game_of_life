@@ -1,134 +1,124 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
+// #include <unistd.h>
 #include <time.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include "game.h"
 
-static char *grid;
-static int grid_width;
-static int grid_height;
+typedef struct {
+  char *cells;
+  int width;
+  int height;
+} grid_t;
 
-int main(int argc, char **argv)
+
+void grid_init(grid_t *grid, int width, int height)
 {
-  if (argc < 3) {
-    fprintf(stderr, "usage: %s <grid_width> <grid_height>\n", argv[0]);
-    exit(1);
-  }
-
-  grid_width = atoi(argv[1]);
-  grid_height = atoi(argv[2]);
-
-  if (grid_width <= 0 || grid_height <= 0) {
-    fprintf(stderr, "error: invalid grid dimensions\n");
-    exit(1);
-  }
-
-  game_init(grid_width, grid_height);
-  grid = gen_grid(grid_width, grid_height);
-  game_run(grid);
-  game_destroy(grid);
-
-  free(grid);
-  return 0;
+  grid->cells = malloc(width * height);
+  grid->width = width;
+  grid->height = height;
 }
 
-char *gen_grid(int grid_width, int grid_height)
+void grid_destroy(grid_t *grid)
 {
-  int i;
-  char *grid;
-
-  grid = malloc(grid_width * grid_height);
-
-  srand48(time(0));
-
-  for (i = 0; i < grid_width * grid_height; i++) {
-    grid[i] = (drand48() > 0.5) ? 1 : 0;
-  }
-
-  return grid;
+  free(grid->cells);
 }
 
-void step_grid()
+void grid_seed(grid_t *grid, long seed)
 {
-  int i, j;
-  int neighbors;
-  char *tmp;
-
-  tmp = malloc(grid_width * grid_height);
-
-  for (i = 0; i < grid_width * grid_height; i++) {
-    tmp[i] = grid[i];
-  }
-
-  for (j = 0; j < grid_height; j++) {
-    for (i = 0; i < grid_width; i++) {
-      neighbors = num_neighbors(tmp, grid_width, grid_height, i, j);
-
-      if (neighbors < 2 || neighbors > 3)
-        grid[j * grid_width + i] = 0;
-      if (neighbors == 3)
-        grid[j * grid_width + i] = 1;
+  // Sorry, srand48 not in standard C99.
+  srand(seed);
+  for (int y = 0; y < grid->height; y++) {
+    for (int x = 0; x < grid->width; x++) {
+      grid->cells[x + grid->width * y] = (rand() & 0x1);
     }
   }
-
-  free(tmp);
 }
 
-int num_neighbors(char *grid, int grid_width, int grid_height, int x, int y)
+char grid_at(grid_t *grid, int x, int y)
 {
-  int i, j;
-  int neighbors;
+  if (x < 0 || x >= grid->width) {
+    return 0;
+  }
+  if (y < 0 || y >= grid->height) {
+    return 0;
+  }
+  return grid->cells[x + grid->width * y];
+}
 
-  neighbors = 0;
-
-  neighbors += (y * grid_width + x+1 >= 0 && y * grid_width + x+1 < grid_width * grid_height) ? grid[y * grid_width + x+1] : 0;
-
-  neighbors += (y * grid_width + x-1 >= 0 && y * grid_width + x-1 < grid_width * grid_height) ? grid[y * grid_width + x-1] : 0;
-
-  neighbors += ((y+1) * grid_width + x >= 0 && (y+1) * grid_width + x < grid_width * grid_height) ? grid[(y+1) * grid_width + x] : 0;
-
-  neighbors += ((y-1) * grid_width + x >= 0 && (y-1) * grid_width + x < grid_width * grid_height) ? grid[(y-1) * grid_width + x] : 0;
-
-  neighbors += ((y+1) * grid_width + x+1 >= 0 && (y+1) * grid_width + x+1 < grid_width * grid_height) ? grid[(y+1) * grid_width + x+1] : 0;
-
-  neighbors += ((y+1) * grid_width + x-1 >= 0 && (y+1) * grid_width + x-1 < grid_width * grid_height) ? grid[(y+1) * grid_width + x-1] : 0;
-
-  neighbors += ((y-1) * grid_width + x+1 >= 0 && (y-1) * grid_width + x+1 < grid_width * grid_height) ? grid[(y-1) * grid_width + x+1] : 0;
-
-  neighbors += ((y-1) * grid_width + x-1 >= 0 && (y-1) * grid_width + x-1 < grid_width * grid_height) ? grid[(y-1) * grid_width + x-1] : 0;
-
+int grid_neighbors(grid_t *grid, int x, int y)
+{
+  int neighbors = 0;
+  
+  for (int dy = -1; dy <= 1; dy++) {
+    for (int dx = -1; dx <= 1; dx++) {
+      if (dx == 0 && dy == 0) {
+        continue;
+      }
+      
+      if (grid_at(grid, x + dx, y + dy)) {
+        neighbors++;
+      }
+    }
+  }
+  
   return neighbors;
+}
+
+void grid_step(grid_t *grid)
+{
+  char *new_cells = malloc(grid->width * grid->height);
+  
+  for (int y = 0; y < grid->height; y++) {
+    for (int x = 0; x < grid->width; x++) {
+      int neighbors = grid_neighbors(grid, x, y);
+      
+      if (neighbors < 2 || neighbors > 3) {
+        new_cells[x + grid->width * y] = 0;
+      }
+      else if (neighbors == 3) {
+        new_cells[x + grid->width * y] = 1;
+      }
+    }
+  }
+  
+  memcpy(grid->cells, new_cells, grid->width * grid->height);
+  free(new_cells);
 }
 
 
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
-static SDL_Texture *texture;
+static SDL_Texture *texture_cells;
+static grid_t *the_grid;
 
-void game_init(int width, int height)
+void game_launch(grid_t *grid)
 {
+  the_grid = grid;
+  
   SDL_Init(SDL_INIT_VIDEO);
-  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_FULLSCREEN_DESKTOP);
+  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
   assert(window);
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
   assert(renderer);
-  texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-  assert(texture);
+  texture_cells = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
+  assert(texture_cells);
 }
 
-void update_texture()
+void grid_stream_to_texture(grid_t *grid, SDL_Texture *texture)
 {
   uint32_t *pixels;
   int pitch;
   SDL_LockTexture(texture, NULL, (void**) &pixels, &pitch);
   
   int x, y;
-  for (y = 0; y < grid_height; y++) {
-    for (x = 0; x < grid_width; x++) {
-      pixels[x + y * pitch / 4] = grid[x + grid_width * y] ? 0xff000000 : 0xffffffff;
+  for (y = 0; y < grid->height; y++) {
+    for (x = 0; x < grid->width; x++) {
+      char cell = grid_at(grid, x, y);
+      pixels[x + y * pitch / 4] = cell ? 0xff000000 : 0xffffffff;
     }
   }
   
@@ -154,22 +144,50 @@ void game_run()
     }
     
     // Step physics
-    step_grid();
+    grid_step(the_grid);
     
     // Update graphics
-    update_texture();
-        
+    grid_stream_to_texture(the_grid, texture_cells);
+    
     // Render window
     SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderCopy(renderer, texture_cells, NULL, NULL);
     SDL_RenderPresent(renderer);
   }
 }
 
-void game_destroy()
+void game_quit()
 {
-  SDL_DestroyTexture(texture);
+  SDL_DestroyTexture(texture_cells);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();
+}
+
+
+int main(int argc, char **argv)
+{
+  if (argc < 3) {
+    fprintf(stderr, "usage: %s <width> <height>\n", argv[0]);
+    exit(1);
+  }
+  
+  int width = atoi(argv[1]);
+  int height = atoi(argv[2]);
+  
+  if (width <= 0 || height <= 0) {
+    fprintf(stderr, "error: invalid grid dimensions\n");
+    exit(1);
+  }
+  
+  grid_t grid;
+  grid_init(&grid, width, height);
+  grid_seed(&grid, time(NULL));
+  
+  game_launch(&grid);
+  game_run();
+  game_quit();
+  
+  grid_destroy(&grid);
+  return 0;
 }

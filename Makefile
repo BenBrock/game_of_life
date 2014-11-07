@@ -1,4 +1,4 @@
-CFLAGS = -g -O3
+CFLAGS = -g -O3 -std=c99
 LDFLAGS = -lSDL2
 
 SRC = src/game.c src/print_grid.c
