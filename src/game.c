@@ -33,7 +33,13 @@ void grid_stream_to_texture(grid_t *grid, SDL_Texture *texture)
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
       uint8_t cell = grid_at(grid, x, y);
-      pixels[x + y * pitch / 4] = cell ? 0x00000000 : 0xffffffff;
+      /*
+        0x101010ff
+        0x10101000
+        0x01010100 - disappear
+        0x01108000 - trippy
+      */
+      pixels[x + y * pitch / 4] = cell ? cell * 0x01108000 : 0xffffffff;
     }
   }
   
