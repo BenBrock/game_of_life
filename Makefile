@@ -1,6 +1,7 @@
 CFLAGS = -g -O3
+LDFLAGS = -lSDL2
 
-SRC = src/game.c
+SRC = src/game.c src/print_grid.c
 
 OBJ = $(SRC:.c=.o)
 
