@@ -17,7 +17,7 @@ void game_launch(grid_t *grid)
   SDL_Init(SDL_INIT_VIDEO);
   window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
   assert(window);
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   assert(renderer);
   texture_cells = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
   assert(texture_cells);
