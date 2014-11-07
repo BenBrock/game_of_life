@@ -1,114 +1,80 @@
 #include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <time.h>
-#include "game.h"
+#include <assert.h>
+#include <stdint.h>
+#include "SDL2/SDL.h"
+#include "gol.h"
 
-int main(int argc, char **argv)
+
+static SDL_Window *window;
+static SDL_Renderer *renderer;
+static SDL_Texture *texture_cells;
+static grid_t *the_grid;
+
+void game_launch(grid_t *grid)
 {
-  if (argc < 3) {
-    fprintf(stderr, "usage: %s [grid_width] [grid_height]\n", argv[0]);
-    exit(1);
-  }
-
-  int grid_width, grid_height;
-  char *grid;
-
-  grid_width = atoi(argv[1]);
-  grid_height = atoi(argv[2]);
-
-  if (grid_width <= 0 || grid_height <= 0) {
-    fprintf(stderr, "error: invalid grid dimensions\n");
-    exit(1);
-  }
-
-  grid = gen_grid(grid_width, grid_height);
-
-  SDL_Window *w;
-
-  w = make_grid(grid, grid_width, grid_height);
-
-  SDL_Delay(5000);
-
-  destroy_grid(w);
-/*
-  int i;
-  for (i = 0; i < 1000; i++) {
-    print_grid(grid, grid_width, grid_height);
-    step_grid(grid, grid_width, grid_height);
-    usleep(200000);
-  }
-*/
-
-  free(grid);
-
-  return 0;
+  the_grid = grid;
+  
+  SDL_Init(SDL_INIT_VIDEO);
+  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
+  assert(window);
+  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  assert(renderer);
+  texture_cells = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
+  assert(texture_cells);
 }
 
-char *gen_grid(int grid_width, int grid_height)
+void grid_stream_to_texture(grid_t *grid, SDL_Texture *texture)
 {
-  int i;
-  char *grid;
-
-  grid = (char *) malloc(sizeof(char) * grid_width * grid_height);
-
-  srand48(time(0));
-
-  for (i = 0; i < grid_width * grid_height; i++) {
-    grid[i] = (drand48() > 0.5) ? 1 : 0;
-  }
-
-  return grid;
-}
-
-void step_grid(char *grid, int grid_width, int grid_height)
-{
-  int i, j;
-  int neighbors;
-  char *tmp;
-
-  tmp = (char *) malloc(sizeof(char) * grid_width * grid_height);
-
-  for (i = 0; i < grid_width * grid_height; i++) {
-    tmp[i] = grid[i];
-  }
-
-  for (j = 0; j < grid_height; j++) {
-    for (i = 0; i < grid_width; i++) {
-      neighbors = num_neighbors(tmp, grid_width, grid_height, i, j);
-
-      if (neighbors < 2 || neighbors > 3)
-        grid[j * grid_width + i] = 0;
-      if (neighbors == 3)
-        grid[j * grid_width + i] = 1;
+  uint32_t *pixels;
+  int pitch;
+  SDL_LockTexture(texture, NULL, (void**) &pixels, &pitch);
+  
+  int x, y;
+  for (y = 0; y < grid->height; y++) {
+    for (x = 0; x < grid->width; x++) {
+      char cell = grid_at(grid, x, y);
+      pixels[x + y * pitch / 4] = cell ? 0xff000000 : 0xffffffff;
     }
   }
-
-  free(tmp);
+  
+  SDL_UnlockTexture(texture);
 }
 
-int num_neighbors(char *grid, int grid_width, int grid_height, int x, int y)
+void game_run()
 {
-  int i, j;
-  int neighbors;
+  while (1) {
+    // Handle events
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      switch (event.type) {
+        case SDL_QUIT:
+          return;
+          break;
+        case SDL_KEYDOWN:
+          if (event.key.keysym.sym == SDLK_ESCAPE) {
+            return;
+          }
+          break;
+      }
+    }
+    
+    // Step physics
+    grid_step(the_grid);
+    
+    // Update graphics
+    grid_stream_to_texture(the_grid, texture_cells);
+    
+    // Render window
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture_cells, NULL, NULL);
+    SDL_RenderPresent(renderer);
+  }
+}
 
-  neighbors = 0;
-
-  neighbors += (y * grid_width + x+1 >= 0 && y * grid_width + x+1 < grid_width * grid_height) ? grid[y * grid_width + x+1] : 0;
-
-  neighbors += (y * grid_width + x-1 >= 0 && y * grid_width + x-1 < grid_width * grid_height) ? grid[y * grid_width + x-1] : 0;
-
-  neighbors += ((y+1) * grid_width + x >= 0 && (y+1) * grid_width + x < grid_width * grid_height) ? grid[(y+1) * grid_width + x] : 0;
-
-  neighbors += ((y-1) * grid_width + x >= 0 && (y-1) * grid_width + x < grid_width * grid_height) ? grid[(y-1) * grid_width + x] : 0;
-
-  neighbors += ((y+1) * grid_width + x+1 >= 0 && (y+1) * grid_width + x+1 < grid_width * grid_height) ? grid[(y+1) * grid_width + x+1] : 0;
-
-  neighbors += ((y+1) * grid_width + x-1 >= 0 && (y+1) * grid_width + x-1 < grid_width * grid_height) ? grid[(y+1) * grid_width + x-1] : 0;
-
-  neighbors += ((y-1) * grid_width + x+1 >= 0 && (y-1) * grid_width + x+1 < grid_width * grid_height) ? grid[(y-1) * grid_width + x+1] : 0;
-
-  neighbors += ((y-1) * grid_width + x-1 >= 0 && (y-1) * grid_width + x-1 < grid_width * grid_height) ? grid[(y-1) * grid_width + x-1] : 0;
-
-  return neighbors;
+void game_quit()
+{
+  SDL_DestroyTexture(texture_cells);
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
 }

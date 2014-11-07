@@ -1,16 +1,16 @@
 CFLAGS = -g -O3
+LDFLAGS = -lSDL2
 
-SRC = src/game.c
-
-OBJ = $(SRC:.c=.o)
+SRCS = \
+	src/game.c \
+	src/term.c \
+	src/grid.c \
+	src/gol.c
 
 all: game
 
-game: $(OBJ)
+game: $(SRCS)
 	$(LINK.c) -o $@ $^
-
-%.o: %.c
-	$(COMPILE.c) -o $@ $^
 
 clean:
 	@rm -fv game $(OBJ)
