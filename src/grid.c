@@ -47,14 +47,22 @@ int grid_neighbors(grid_t *grid, int x, int y)
 
   neighbors = 0;
 
-  neighbors += (y * grid->width + x+1 >= 0 && y * grid->width + x+1 < grid->width * grid->height) ? grid->cells[y * grid->width + x+1] : 0;
-  neighbors += (y * grid->width + x-1 >= 0 && y * grid->width + x-1 < grid->width * grid->height) ? grid->cells[y * grid->width + x-1] : 0;
-  neighbors += ((y+1) * grid->width + x >= 0 && (y+1) * grid->width + x < grid->width * grid->height) ? grid->cells[(y+1) * grid->width + x] : 0;
-  neighbors += ((y-1) * grid->width + x >= 0 && (y-1) * grid->width + x < grid->width * grid->height) ? grid->cells[(y-1) * grid->width + x] : 0;
-  neighbors += ((y+1) * grid->width + x+1 >= 0 && (y+1) * grid->width + x+1 < grid->width * grid->height) ? grid->cells[(y+1) * grid->width + x+1] : 0;
-  neighbors += ((y+1) * grid->width + x-1 >= 0 && (y+1) * grid->width + x-1 < grid->width * grid->height) ? grid->cells[(y+1) * grid->width + x-1] : 0;
-  neighbors += ((y-1) * grid->width + x+1 >= 0 && (y-1) * grid->width + x+1 < grid->width * grid->height) ? grid->cells[(y-1) * grid->width + x+1] : 0;
-  neighbors += ((y-1) * grid->width + x-1 >= 0 && (y-1) * grid->width + x-1 < grid->width * grid->height) ? grid->cells[(y-1) * grid->width + x-1] : 0;
+  /* Direct right. */
+  neighbors += (x+1 < grid->width) ? grid->cells[y * grid->width + x+1] : 0;
+  /* Direct left. */
+  neighbors += (x-1 >= 0) ? grid->cells[y * grid->width + x-1] : 0;
+  /* Below. */
+  neighbors += (y+1 < grid->height) ? grid->cells[(y+1) * grid->width + x] : 0;
+  /* Above. */
+  neighbors += (y-1 >= 0) ? grid->cells[(y-1) * grid->width + x] : 0;
+
+  /* Lower right diagonal. */
+  neighbors += (y+1 < grid->height && x+1 < grid->width) ? grid->cells[(y+1) * grid->width + x+1] : 0;
+  /* Lower left diagonal */
+  neighbors += (y+1 < grid->height && x-1 > 0) ? grid->cells[(y+1) * grid->width + x-1] : 0;
+  /* Upper right diagonal */
+  neighbors += (y-1 > 0 && x+1 < grid->width) ? grid->cells[(y-1) * grid->width + x+1] : 0;
+  neighbors += (y-1 > 0 && x-1 > 0) ? grid->cells[(y-1) * grid->width + x-1] : 0;
 
   return neighbors;
 }
