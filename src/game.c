@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 #include "game.h"
 
 int main(int argc, char **argv)
@@ -23,11 +24,21 @@ int main(int argc, char **argv)
 
   grid = gen_grid(grid_width, grid_height);
 
-  while (1) {
+  SDL_Window *w;
+
+  w = make_grid(grid, grid_width, grid_height);
+
+  SDL_Delay(5000);
+
+  destroy_grid(w);
+/*
+  int i;
+  for (i = 0; i < 1000; i++) {
     print_grid(grid, grid_width, grid_height);
     step_grid(grid, grid_width, grid_height);
     usleep(200000);
   }
+*/
 
   free(grid);
 
@@ -48,20 +59,6 @@ char *gen_grid(int grid_width, int grid_height)
   }
 
   return grid;
-}
-
-void print_grid(char *grid, int grid_width, int grid_height)
-{
-  int i, j;
-
-  printf("\033[H");
-  for (j = 0; j < grid_height; j++) {
-    for (i = 0; i < grid_width; i++) {
-      printf((grid[j * grid_width + i]) ? "\033[07m  \033[m" : "  ");
-    }
-    printf("\033[E");
-  }
-  fflush(stdout);
 }
 
 void step_grid(char *grid, int grid_width, int grid_height)
