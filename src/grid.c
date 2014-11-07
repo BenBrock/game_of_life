@@ -10,7 +10,7 @@ inline int euc_mod(int p, int q)
 
 void grid_init(grid_t *grid, int width, int height)
 {
-  grid->cells = (char *) malloc(sizeof(char) * width * height);
+  grid->cells = (uint8_t *) malloc(sizeof(uint8_t) * width * height);
   grid->width = width;
   grid->height = height;
 }
@@ -33,7 +33,7 @@ void grid_seed(grid_t *grid, long seed)
   }
 }
 
-char grid_at(grid_t *grid, int x, int y)
+uint8_t grid_at(grid_t *grid, int x, int y)
 {
   x = euc_mod(x, grid->width);
   y = euc_mod(y, grid->height);

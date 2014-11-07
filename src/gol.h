@@ -1,9 +1,11 @@
 #pragma once
 
+#include <stdint.h>
+
 /* grid.c */
 
 typedef struct {
-  char *cells;
+  uint8_t *cells;
   int width;
   int height;
 } grid_t;
@@ -11,7 +13,7 @@ typedef struct {
 void grid_init(grid_t *grid, int width, int height);
 void grid_destroy(grid_t *grid);
 void grid_seed(grid_t *grid, long seed);
-char grid_at(grid_t *grid, int x, int y);
+uint8_t grid_at(grid_t *grid, int x, int y);
 void grid_step(grid_t *grid);
 
 /* game.c */
