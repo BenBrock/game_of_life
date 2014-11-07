@@ -5,10 +5,12 @@
 
 void term_print(grid_t *grid)
 {
+  int i, j;
+
   printf("\033[H");
-  for (int y = 0; y < grid->height; y++) {
-    for (int x = 0; x < grid->width; x++) {
-      printf(grid_at(grid, x, y) ? "\033[07m  \033[m" : "  ");
+  for (j = 0; j < grid->height; j++) {
+    for (i = 0; i < grid->width; i++) {
+      printf(grid_at(grid, i, j) ? "\033[07m  \033[m" : "  ");
     }
     printf("\033[E");
   }

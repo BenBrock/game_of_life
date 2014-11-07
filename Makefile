@@ -1,4 +1,4 @@
-CFLAGS = -g -O3 -std=c99
+CFLAGS = -g -O3
 LDFLAGS = -lSDL2
 
 SRCS = \

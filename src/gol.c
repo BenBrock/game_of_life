@@ -21,12 +21,13 @@ int main(int argc, char **argv)
   
   grid_t grid;
   grid_init(&grid, width, height);
-  grid_seed(&grid, time(NULL));
+  grid_seed(&grid, time(0));
   
   game_launch(&grid);
   game_run();
   game_quit();
   
   grid_destroy(&grid);
+
   return 0;
 }
