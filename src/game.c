@@ -66,6 +66,7 @@ void game_run()
     
     // Step physics
     grid_step(the_grid);
+    SDL_Delay(20);
     
     // Update graphics
     grid_stream_to_texture(the_grid, texture_cells);
