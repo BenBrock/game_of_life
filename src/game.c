@@ -5,25 +5,43 @@
 #include "gol.h"
 
 
+// Set to 0 for off, 255 max
+#define CRT_DECAY 0
+
 static SDL_Window *window;
 static SDL_Renderer *renderer;
-static SDL_Texture *texture_cells;
+static SDL_Texture *texture_raw;
+static SDL_Texture *texture_target;
 static grid_t *the_grid;
+
 
 void game_launch(grid_t *grid)
 {
   the_grid = grid;
   
-  SDL_Init(SDL_INIT_VIDEO);
+  int err = SDL_Init(SDL_INIT_VIDEO);
+  assert(!err);
+  
   window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
   assert(window);
+  
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   assert(renderer);
-  texture_cells = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
-  assert(texture_cells);
+#if CRT_DECAY
+  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+#endif
+  
+  texture_raw = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
+  assert(texture_raw);
+#if CRT_DECAY
+  SDL_SetTextureBlendMode(texture_raw, SDL_BLENDMODE_BLEND);
+#endif
+  
+  texture_target = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, grid->width, grid->height);
+  assert(texture_target);
 }
 
-void grid_stream_to_texture(grid_t *grid, SDL_Texture *texture)
+static void draw_grid(grid_t *grid, SDL_Texture *texture)
 {
   uint32_t *pixels;
   int pitch;
@@ -33,13 +51,8 @@ void grid_stream_to_texture(grid_t *grid, SDL_Texture *texture)
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
       uint8_t cell = grid_at(grid, x, y);
-      /*
-        0x101010ff
-        0x10101000
-        0x01010100 - disappear
-        0x01108000 - trippy
-      */
-      pixels[x + y * pitch / 4] = cell ? cell * 0x01108000 : 0xffffffff;
+      
+      pixels[x + y * pitch / 4] = cell ? 0x000000ff : 0xffffff00;
     }
   }
   
@@ -66,21 +79,29 @@ void game_run()
     
     // Step physics
     grid_step(the_grid);
-    SDL_Delay(20);
     
     // Update graphics
-    grid_stream_to_texture(the_grid, texture_cells);
+    draw_grid(the_grid, texture_raw);
+    
+    // Render target texture
+    SDL_SetRenderTarget(renderer, texture_target);
+#if CRT_DECAY
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, CRT_DECAY);
+    SDL_RenderFillRect(renderer, NULL);
+#endif
+    SDL_RenderCopy(renderer, texture_raw, NULL, NULL);
     
     // Render window
-    SDL_RenderClear(renderer);
-    SDL_RenderCopy(renderer, texture_cells, NULL, NULL);
+    SDL_SetRenderTarget(renderer, NULL);
+    SDL_RenderCopy(renderer, texture_target, NULL, NULL);
     SDL_RenderPresent(renderer);
   }
 }
 
 void game_quit()
 {
-  SDL_DestroyTexture(texture_cells);
+  SDL_DestroyTexture(texture_target);
+  SDL_DestroyTexture(texture_raw);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   SDL_Quit();

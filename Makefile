@@ -7,10 +7,10 @@ SRCS = \
 	src/grid.c \
 	src/gol.c
 
-all: game
+all: gol
 
-game: $(SRCS)
+gol: $(SRCS)
 	$(LINK.c) -o $@ $^
 
 clean:
-	@rm -fv game $(OBJ)
+	@rm -fv gol $(OBJ)
