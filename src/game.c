@@ -5,8 +5,8 @@
 #include "gol.h"
 
 
-// Set to 0 for off, 255 max
-#define CRT_DECAY 0
+// Set to 0 for off, 255 max, lower is more intense
+#define CRT_FACTOR 32
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -27,13 +27,13 @@ void game_launch(grid_t *grid)
   
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
   assert(renderer);
-#if CRT_DECAY
+#if CRT_FACTOR
   SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 #endif
   
   texture_raw = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
   assert(texture_raw);
-#if CRT_DECAY
+#if CRT_FACTOR
   SDL_SetTextureBlendMode(texture_raw, SDL_BLENDMODE_BLEND);
 #endif
   
@@ -51,8 +51,7 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
       uint8_t cell = grid_at(grid, x, y);
-      
-      pixels[x + y * pitch / 4] = cell ? 0x000000ff : 0xffffff00;
+      pixels[x + y * pitch / 4] = cell ? 0x44ff44ff : 0x00000000;
     }
   }
   
@@ -85,8 +84,8 @@ void game_run()
     
     // Render target texture
     SDL_SetRenderTarget(renderer, texture_target);
-#if CRT_DECAY
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, CRT_DECAY);
+#if CRT_FACTOR
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, CRT_FACTOR);
     SDL_RenderFillRect(renderer, NULL);
 #endif
     SDL_RenderCopy(renderer, texture_raw, NULL, NULL);
