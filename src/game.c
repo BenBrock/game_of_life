@@ -6,7 +6,10 @@
 
 
 // Set to 0 for off, 255 max, lower is more intense
-#define CRT_FACTOR 32
+#define CRT_FACTOR 0
+
+// The number of vsync frames per automata timestep
+#define FRAMES_PER_STEP 2
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -51,7 +54,8 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
       uint8_t cell = grid_at(grid, x, y);
-      pixels[x + y * pitch / 4] = cell ? 0x44ff44ff : 0x00000000;
+      // Background is only relevant if CRT effect is disabled
+      pixels[x + y * pitch / 4] = cell ? 0x000000ff : 0xffffff00;
     }
   }
   
@@ -60,6 +64,7 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
 
 void game_run()
 {
+  int frame = 0;
   while (1) {
     // Handle events
     SDL_Event event;
@@ -76,16 +81,18 @@ void game_run()
       }
     }
     
-    // Step physics
-    grid_step(the_grid);
-    
-    // Update graphics
-    draw_grid(the_grid, texture_raw);
+    if (frame % FRAMES_PER_STEP == 0) {
+      // Step physics
+      grid_step(the_grid);
+      
+      // Update graphics
+      draw_grid(the_grid, texture_raw);
+    }
     
     // Render target texture
     SDL_SetRenderTarget(renderer, texture_target);
 #if CRT_FACTOR
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, CRT_FACTOR);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, CRT_FACTOR);
     SDL_RenderFillRect(renderer, NULL);
 #endif
     SDL_RenderCopy(renderer, texture_raw, NULL, NULL);
@@ -94,6 +101,8 @@ void game_run()
     SDL_SetRenderTarget(renderer, NULL);
     SDL_RenderCopy(renderer, texture_target, NULL, NULL);
     SDL_RenderPresent(renderer);
+    
+    frame++;
   }
 }
 
