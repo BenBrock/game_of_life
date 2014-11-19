@@ -53,13 +53,25 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
   int x, y;
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
-      uint8_t cell = grid_at(grid, x, y);
+      uint8_t cell = grid->cells[x + y * grid->width];
       // Background is only relevant if CRT effect is disabled
       pixels[x + y * pitch / 4] = cell ? 0x000000ff : 0xffffff00;
     }
   }
   
   SDL_UnlockTexture(texture);
+}
+
+void paint(int x, int y)
+{
+  int sx, sy;
+  SDL_GetWindowSize(window, &sx, &sy);
+  x = x * the_grid->width / sx;
+  y = y * the_grid->height / sy;
+  
+  if (0 <= x && x < the_grid->width && 0 <= y && y < the_grid->height) {
+    the_grid->cells[x + y * the_grid->width] = 1;
+  }
 }
 
 void game_run()
@@ -78,6 +90,15 @@ void game_run()
             return;
           }
           break;
+        case SDL_MOUSEMOTION:
+          if (event.motion.state & SDL_BUTTON_LMASK) {
+            paint(event.motion.x, event.motion.y);
+          }
+          break;
+        case SDL_MOUSEBUTTONDOWN:
+          if (event.button.button == SDL_BUTTON_LEFT) {
+            paint(event.button.x, event.button.y);
+          }
       }
     }
     

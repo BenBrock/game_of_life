@@ -3,12 +3,6 @@
 #include <stdio.h>
 #include "gol.h"
 
-inline int euc_mod(int p, int q)
-{
-  int r = p % q;
-  return (r < 0) ? r + q : r;
-}
-
 void grid_init(grid_t *grid, int width, int height)
 {
   grid->cells = (uint8_t *) malloc(sizeof(uint8_t) * width * height);
@@ -34,15 +28,7 @@ void grid_seed(grid_t *grid, long seed)
   }
 }
 
-uint8_t grid_at(grid_t *grid, int x, int y)
-{
-  x = euc_mod(x, grid->width);
-  y = euc_mod(y, grid->height);
-  return grid->cells[x + grid->width * y];
-}
-
-inline
-int block_neighbors(uint8_t *block, int pitch, int x, int y)
+inline int block_neighbors(uint8_t *block, int pitch, int x, int y)
 {
   // Assumes a little endian system
   // No branching
