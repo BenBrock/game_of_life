@@ -9,7 +9,7 @@
 #define CRT_FACTOR 0
 
 // The number of vsync frames per automata timestep
-#define FRAMES_PER_STEP 2
+#define FRAMES_PER_STEP 1
 
 static SDL_Window *window;
 static SDL_Renderer *renderer;
@@ -25,7 +25,7 @@ void game_launch(grid_t *grid)
   int err = SDL_Init(SDL_INIT_VIDEO);
   assert(!err);
   
-  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
+  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, 0);
   assert(window);
   
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);

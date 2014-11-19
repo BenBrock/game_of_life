@@ -42,7 +42,6 @@ uint8_t grid_at(grid_t *grid, int x, int y)
 
 int grid_neighbors(grid_t *grid, int x, int y)
 {
-  int i, j;
   int neighbors;
 
   neighbors = 0;
