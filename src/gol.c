@@ -45,9 +45,14 @@ int main(int argc, char **argv)
     // none
     printf("Stepping 1000 generations...\n");
     int gen;
-    for (gen = 0; gen < 1000; gen++) {
+    printf("\033[s");
+    for (gen = 1; gen <= 1000; gen++) {
       grid_step(&grid);
+      printf("\033[u\033[K");
+      printf("generation %d", gen);
+      fflush(stdout);
     }
+    printf("\n");
   }
   
   grid_destroy(&grid);
