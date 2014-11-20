@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include "gol.h"
 
 void grid_init(grid_t *grid, int width, int height)
@@ -8,6 +7,9 @@ void grid_init(grid_t *grid, int width, int height)
   grid->cells = (uint8_t *) malloc(sizeof(uint8_t) * width * height);
   grid->width = width;
   grid->height = height;
+  memset(&grid->history_pos, 0, sizeof(grid->history_pos));
+  grid->history_pos = 0;
+  grid->cycle = false;
 }
 
 void grid_destroy(grid_t *grid)
@@ -62,6 +64,8 @@ void grid_step(grid_t *grid)
   // Wrapping can be done here if needed, by simply copying
   // the edge cells to the other side of the padded grid.
   
+  uint32_t hash = 0;
+  
   for (j = 0; j < grid->height; j++) {
     for (i = 0; i < grid->width; i++) {
       int neighbors = block_neighbors(block, pitch, i, j);
@@ -76,8 +80,23 @@ void grid_step(grid_t *grid)
           grid->cells[i + j * grid->width] = 0;
           break;
       }
+      
+      // Hash the neighbor count because that's all we have handy on the stack.
+      // Also this is just a random number.
+      hash = hash * 23485739491 + neighbors;
     }
   }
+  
+  // Check hash against the history
+  for (i = 0; i < HISTORY_LENGTH; i++) {
+    if (grid->history[i] == hash) {
+      grid->cycle = true;
+      break;
+    }
+    grid->cycle = false;
+  }
+  grid->history[grid->history_pos++] = hash;
+  grid->history_pos %= HISTORY_LENGTH;
   
   free(block);
 }
