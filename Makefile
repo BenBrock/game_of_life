@@ -1,4 +1,4 @@
-CFLAGS = -g -O3
+CFLAGS = -Wall -g -O3 -std=gnu89
 LDFLAGS = -lSDL2
 
 SRCS = \

@@ -9,39 +9,41 @@
 #define CRT_FACTOR 0
 
 // The number of vsync frames per automata timestep
-#define FRAMES_PER_STEP 2
+#define FRAMES_PER_STEP 1
 
-static SDL_Window *window;
-static SDL_Renderer *renderer;
-static SDL_Texture *texture_raw;
-static SDL_Texture *texture_target;
-static grid_t *the_grid;
+static struct {
+  SDL_Window *window;
+  SDL_Renderer *renderer;
+  SDL_Texture *texture_raw;
+  SDL_Texture *texture_target;
+  grid_t *grid;
+  int frame;
+} game;
 
 
 void game_launch(grid_t *grid)
 {
-  the_grid = grid;
+  game.grid = grid;
   
   int err = SDL_Init(SDL_INIT_VIDEO);
   assert(!err);
   
-  window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, SDL_WINDOW_FULLSCREEN_DESKTOP);
-  assert(window);
+  game.window = SDL_CreateWindow("GOL", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, grid->width, grid->height, 0);
+  assert(game.window);
   
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-  assert(renderer);
+  game.renderer = SDL_CreateRenderer(game.window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+  assert(game.renderer);
+  
+  game.texture_raw = SDL_CreateTexture(game.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
+  assert(game.texture_raw);
+  
 #if CRT_FACTOR
-  SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-#endif
+  SDL_SetRenderDrawBlendMode(game.renderer, SDL_BLENDMODE_BLEND);
+  SDL_SetTextureBlendMode(game.texture_raw, SDL_BLENDMODE_BLEND);
   
-  texture_raw = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, grid->width, grid->height);
-  assert(texture_raw);
-#if CRT_FACTOR
-  SDL_SetTextureBlendMode(texture_raw, SDL_BLENDMODE_BLEND);
+  game.texture_target = SDL_CreateTexture(game.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, grid->width, grid->height);
+  assert(game.texture_target);
 #endif
-  
-  texture_target = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, grid->width, grid->height);
-  assert(texture_target);
 }
 
 static void draw_grid(grid_t *grid, SDL_Texture *texture)
@@ -53,7 +55,7 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
   int x, y;
   for (y = 0; y < grid->height; y++) {
     for (x = 0; x < grid->width; x++) {
-      uint8_t cell = grid_at(grid, x, y);
+      uint8_t cell = grid->cells[x + y * grid->width];
       // Background is only relevant if CRT effect is disabled
       pixels[x + y * pitch / 4] = cell ? 0x000000ff : 0xffffff00;
     }
@@ -62,9 +64,21 @@ static void draw_grid(grid_t *grid, SDL_Texture *texture)
   SDL_UnlockTexture(texture);
 }
 
+void paint(int x, int y)
+{
+  int sx, sy;
+  SDL_GetWindowSize(game.window, &sx, &sy);
+  x = x * game.grid->width / sx;
+  y = y * game.grid->height / sy;
+  
+  if (0 <= x && x < game.grid->width && 0 <= y && y < game.grid->height) {
+    game.grid->cells[x + y * game.grid->width] = 1;
+  }
+}
+
 void game_run()
 {
-  int frame = 0;
+  game.frame = 0;
   while (1) {
     // Handle events
     SDL_Event event;
@@ -78,39 +92,49 @@ void game_run()
             return;
           }
           break;
+        case SDL_MOUSEMOTION:
+          if (event.motion.state & SDL_BUTTON_LMASK) {
+            paint(event.motion.x, event.motion.y);
+          }
+          break;
+        case SDL_MOUSEBUTTONDOWN:
+          if (event.button.button == SDL_BUTTON_LEFT) {
+            paint(event.button.x, event.button.y);
+          }
       }
     }
     
-    if (frame % FRAMES_PER_STEP == 0) {
+    if (game.frame % FRAMES_PER_STEP == 0) {
       // Step physics
-      grid_step(the_grid);
+      grid_step(game.grid);
       
       // Update graphics
-      draw_grid(the_grid, texture_raw);
+      draw_grid(game.grid, game.texture_raw);
     }
     
     // Render target texture
-    SDL_SetRenderTarget(renderer, texture_target);
 #if CRT_FACTOR
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, CRT_FACTOR);
-    SDL_RenderFillRect(renderer, NULL);
+    SDL_SetRenderTarget(game.renderer, game.texture_target);
+    SDL_SetRenderDrawColor(game.renderer, 255, 255, 255, CRT_FACTOR);
+    SDL_RenderFillRect(game.renderer, NULL);
 #endif
-    SDL_RenderCopy(renderer, texture_raw, NULL, NULL);
+    
+    SDL_RenderCopy(game.renderer, game.texture_raw, NULL, NULL);
     
     // Render window
-    SDL_SetRenderTarget(renderer, NULL);
-    SDL_RenderCopy(renderer, texture_target, NULL, NULL);
-    SDL_RenderPresent(renderer);
+    SDL_SetRenderTarget(game.renderer, NULL);
+    SDL_RenderCopy(game.renderer, game.texture_target, NULL, NULL);
+    SDL_RenderPresent(game.renderer);
     
-    frame++;
+    game.frame++;
   }
 }
 
 void game_quit()
 {
-  SDL_DestroyTexture(texture_target);
-  SDL_DestroyTexture(texture_raw);
-  SDL_DestroyRenderer(renderer);
-  SDL_DestroyWindow(window);
+  SDL_DestroyTexture(game.texture_target);
+  SDL_DestroyTexture(game.texture_raw);
+  SDL_DestroyRenderer(game.renderer);
+  SDL_DestroyWindow(game.window);
   SDL_Quit();
 }
